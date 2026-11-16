@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>轻轻点一下</title>
+<style>
+:root{
+  --paper:#fcf8f5;
+  --ink:#574a46;
+  --ink-dim:#a9958e;
+  --hint:#cdb9b3;
+  --pink:#e79aa6;
+  --pink-deep:#d98d9c;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--paper);
+  font-family:-apple-system,"Helvetica Neue","PingFang SC","Noto Sans SC",sans-serif;
+  color:var(--ink);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  user-select:none;-webkit-user-select:none;
+}
+.wrap{
+  height:100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:0 34px env(safe-area-inset-bottom);
+  position:relative;
+}
+
+/* —— 心 —— */
+.stage{position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center}
+.glow{
+  position:absolute;width:230px;height:230px;border-radius:50%;
+  background:radial-gradient(circle,rgba(231,154,166,.20) 0%,rgba(231,154,166,.055) 38%,rgba(231,154,166,0) 66%);
+  opacity:.6;transition:opacity .7s ease;pointer-events:none;
+}
+.heart{
+  width:30px;height:30px;
+  animation:enter .95s ease both, breathe 4.2s ease-in-out 1s infinite;
+  transition:transform .38s cubic-bezier(.34,1.56,.64,1);
+  animation:breathe 4.2s ease-in-out infinite;
+  will-change:transform;
+}
+@keyframes enter{
+  from{opacity:0;transform:scale(.86)}
+  to{opacity:1;transform:scale(1)}
+}
+@keyframes breathe{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.06)}
+}
+.ripple{
+  position:absolute;width:34px;height:34px;border-radius:50%;
+  border:1px solid rgba(231,154,166,.55);
+  opacity:0;pointer-events:none;
+}
+
+/* —— 话 —— */
+.line{
+  margin-top:52px;
+  min-height:3.6em;
+  display:flex;align-items:flex-start;justify-content:center;
+  width:100%;
+}
+.say{
+  font-family:"Songti SC","Noto Serif SC",Georgia,serif;
+  font-size:19px;line-height:1.95;letter-spacing:.05em;
+  color:var(--ink);
+  text-align:center;max-width:21em;
+  opacity:0;transform:translateY(10px);
+  transition:opacity .65s ease,transform .65s cubic-bezier(.2,.7,.3,1);
+}
+.say.show{opacity:1;transform:translateY(0)}
+
+.hint{
+  position:absolute;bottom:calc(14% + env(safe-area-inset-bottom));
+  font-size:10.5px;letter-spacing:.34em;color:var(--hint);
+  transition:opacity 1.1s ease,transform 1.1s ease;
+  padding-left:.34em;
+}
+.hint.gone{opacity:0;transform:translateY(6px)}
+
+/* —— 呼吸数 —— */
+
+@media (max-height:640px){
+  .stage{width:96px;height:96px}
+  .line{margin-top:36px}
+  .say{font-size:17.5px}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+
+  <div class="stage">
+    <div class="glow" id="glow"></div>
+    <div class="ripple" id="ripple"></div>
+    <svg class="heart" id="heart" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 21s-8.2-5.1-10-9.4C.7 8.2 2.6 4.6 6.1 4.1c2.1-.3 4.4.9 5.9 3 1.5-2.1 3.8-3.3 5.9-3 3.5.5 5.4 4.1 4.1 7.5C20.2 15.9 12 21 12 21z"
+            fill="var(--pink)"/>
+    </svg>
+  </div>
+
+  <div class="line"><div class="say" id="say"></div></div>
+  <div class="hint" id="hint">轻 轻 点 一 下</div>
+</div>
+
+<script>
+const lines = [
+  "你已经比自己以为的更能扛。",
+  "慢一点没关系，方向对就行。",
+  "今天能站起来，就已经算赢了。",
+  "不用做到满分，你又不是考试。",
+  "累的时候，是可以停的。",
+  "你熬过的那些夜晚，都算数。",
+  "别人走得快，不代表你走错了路。",
+  "先把这口气喘匀，再想下一步。",
+  "难过就说出来，憋着会疼。",
+  "你值得的，从来不是「再努力一点」。",
+  "不用一直发光，被看见就够了。",
+  "别怕，我在。"
+];
+
+const wrap = document.getElementById('wrap');
+const say = document.getElementById('say');
+const heart = document.getElementById('heart');
+const ripple = document.getElementById('ripple');
+const hint = document.getElementById('hint');
+const glow = document.getElementById('glow');
+
+let taps = 0, lastAt = 0, lastShown = '', deck = [];
+
+function refill() {
+  deck = lines.slice();
+  for (let k = deck.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    const t = deck[k]; deck[k] = deck[j]; deck[j] = t;
+  }
+}
+
+function drawLine() {
+  if (!deck.length) refill();
+  let v = deck.pop();
+  if (v === lastShown && deck.length) v = deck.pop();
+  lastShown = v;
+  return v;
+}
+
+function pulse() {
+  heart.style.animation = 'none';
+  heart.style.transform = 'scale(1.3)';
+  setTimeout(() => {
+    heart.style.transform = 'scale(1)';
+    setTimeout(() => { heart.style.animation = 'breathe 4.2s ease-in-out infinite'; }, 400);
+  }, 130);
+
+  ripple.style.transition = 'none';
+  ripple.style.opacity = '.9';
+  ripple.style.transform = 'scale(1)';
+  requestAnimationFrame(() => {
+    ripple.style.transition = 'opacity .95s ease, transform 1.15s cubic-bezier(.2,.7,.3,1)';
+    ripple.style.opacity = '0';
+    ripple.style.transform = 'scale(3.1)';
+  });
+
+  glow.style.opacity = '1';
+  setTimeout(() => { glow.style.opacity = '.6'; }, 900);
+}
+
+function speak() {
+  const now = Date.now();
+  if (now - lastAt < 620) return;
+  lastAt = now;
+
+  taps++;
+  if (taps === 1) hint.classList.add('gone');
+  pulse();
+
+  say.classList.remove('show');
+  setTimeout(() => {
+    say.textContent = drawLine();
+    say.classList.add('show');
+  }, 260);
+}
+
+wrap.addEventListener('click', speak);
+wrap.addEventListener('touchstart', e => { e.preventDefault(); speak(); }, { passive: false });
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); speak(); }
+});
+</script>
+</body>
+</html>
